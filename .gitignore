@@ -6,3 +6,23 @@ expo-env.d.ts
 # @end expo-cli
 
 .env.local
+
+node_modules/
+
+.expo/
+
+dist/
+
+web-build/
+
+.env
+
+.env.local
+
+.DS_Store
+
+*.log
+
+npm-debug.log*
+
+eas.json
