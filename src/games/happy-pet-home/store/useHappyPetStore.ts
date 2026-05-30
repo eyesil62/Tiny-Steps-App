@@ -74,7 +74,7 @@ export const useHappyPetStore = create<HappyPetState>((set, get) => ({
 
   namePet: (name) => {
     set({
-      petName:      name || get().petId ?? 'Buddy',
+      petName: name ?? get().petId ?? 'Buddy',
       isAdopted:    true,
       currentScreen:'room',
       showGreeting: true,
