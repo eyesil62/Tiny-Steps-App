@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { speak } from '../../lib/speech';
-import { GameShell } from './GameShell';
+import { GameShell } from '../../components/game/GameShell';
 
 const { width } = Dimensions.get('window');
 

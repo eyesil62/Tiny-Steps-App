@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
-import { GameShell } from './GameShell';
+import { GameShell } from '../../components/game/GameShell';
 
 const { width } = Dimensions.get('window');
 const CARD = (width - 60) / 2;
