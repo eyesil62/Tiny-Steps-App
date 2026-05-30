@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "TinySteps",
+    "slug": "tinysteps",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "tinysteps",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tinysteps.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFF9F0"
+      },
+      "package": "com.tinysteps.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
