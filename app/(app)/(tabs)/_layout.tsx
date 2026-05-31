@@ -18,10 +18,12 @@ function TabIcon({ emoji, label, focused, color }: TabIconProps) {
   );
 }
 
+const NAVY = '#2D5BE3';
+
 const TAB_CONFIG = [
-  { name: 'home',    emoji: '🏠', label: 'Home',    color: colors.coral    },
+  { name: 'home',    emoji: '🏠', label: 'Home',    color: NAVY            },
   { name: 'learn',   emoji: '📚', label: 'Learn',   color: colors.sky      },
-  { name: 'games',   emoji: '🎮', label: 'Games',   color: colors.coral    },
+  { name: 'games',   emoji: '🎮', label: 'Games',   color: NAVY            },
   { name: 'stories', emoji: '📖', label: 'Stories', color: colors.lavender },
   { name: 'habits',  emoji: '⭐', label: 'Habits',  color: colors.sun      },
   { name: 'parent',  emoji: '👪', label: 'Parent',  color: colors.mint     },
@@ -58,11 +60,11 @@ const styles = StyleSheet.create({
     height:           Platform.OS === 'ios' ? 82 : 68,
     paddingBottom:    Platform.OS === 'ios' ? 20 : 8,
     paddingTop:       6,
-    shadowColor:      '#000',
+    shadowColor:      '#2D5BE3',
     shadowOffset:     { width: 0, height: -3 },
-    shadowOpacity:    0.08,
-    shadowRadius:     12,
-    elevation:        12,
+    shadowOpacity:    0.1,
+    shadowRadius:     16,
+    elevation:        14,
   },
   iconWrap: {
     alignItems: 'center', justifyContent: 'center',

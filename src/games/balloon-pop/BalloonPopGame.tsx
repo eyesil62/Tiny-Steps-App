@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
+  ImageSourcePropType,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,13 +26,25 @@ const COLORS = [
 const SHAPES = ['Circle', 'Square', 'Triangle', 'Diamond'] as const;
 const NUMBERS = [1, 2, 3, 4, 5];
 
+const FRUITS: {
+  name: 'Apple' | 'Pear' | 'Banana' | 'Grape' | 'Orange';
+  color: typeof COLORS[number];
+  image: ImageSourcePropType;
+}[] = [
+  { name: 'Apple', color: COLORS[0], image: require('../../assets/fruits/apple.png') },
+  { name: 'Pear', color: COLORS[3], image: require('../../assets/fruits/pear.png') },
+  { name: 'Banana', color: COLORS[2], image: require('../../assets/fruits/banana.png') },
+  { name: 'Grape', color: COLORS[4], image: require('../../assets/fruits/grape.png') },
+  { name: 'Orange', color: COLORS[5], image: require('../../assets/fruits/orange.png') },
+];
+
 const LEVELS = [
   { mode: 'color', goal: 12, seconds: 45, spawnMs: 650 },
   { mode: 'color', goal: 15, seconds: 45, spawnMs: 600 },
-  { mode: 'shape', goal: 15, seconds: 60, spawnMs: 600 },
+  { mode: 'fruit', goal: 15, seconds: 60, spawnMs: 600 },
+  { mode: 'fruit', goal: 18, seconds: 60, spawnMs: 550 },
   { mode: 'shape', goal: 18, seconds: 60, spawnMs: 550 },
-  { mode: 'number', goal: 18, seconds: 60, spawnMs: 550 },
-  { mode: 'number', goal: 20, seconds: 60, spawnMs: 500 },
+  { mode: 'shape', goal: 20, seconds: 60, spawnMs: 500 },
   { mode: 'mixed', goal: 18, seconds: 75, spawnMs: 500 },
   { mode: 'mixed', goal: 20, seconds: 75, spawnMs: 475 },
   { mode: 'mixed', goal: 22, seconds: 90, spawnMs: 450 },
@@ -42,6 +56,7 @@ const MAX_LEVELS = LEVELS.length;
 
 type BalloonColor = typeof COLORS[number];
 type BalloonShape = typeof SHAPES[number];
+type BalloonFruit = typeof FRUITS[number];
 type LevelMode = typeof LEVELS[number]['mode'];
 type Timer = ReturnType<typeof setTimeout> | ReturnType<typeof setInterval>;
 
@@ -49,6 +64,7 @@ interface Target {
   color: BalloonColor;
   shape: BalloonShape;
   number: number;
+  fruit: BalloonFruit;
 }
 
 interface Balloon {
@@ -56,6 +72,7 @@ interface Balloon {
   color: BalloonColor;
   shape: BalloonShape;
   number: number;
+  fruit: BalloonFruit;
   x: number;
   size: number;
   y: Animated.Value;
@@ -72,6 +89,7 @@ function buildTarget(): Target {
     color: randomItem(COLORS),
     shape: randomItem(SHAPES),
     number: randomItem(NUMBERS),
+    fruit: randomItem(FRUITS),
   };
 }
 
@@ -80,12 +98,12 @@ function isCorrectBalloon(balloon: Balloon, target: Target, mode: LevelMode) {
     return balloon.color.name === target.color.name;
   }
 
-  if (mode === 'shape') {
-    return balloon.color.name === target.color.name && balloon.shape === target.shape;
+  if (mode === 'fruit') {
+    return balloon.fruit.name === target.fruit.name;
   }
 
-  if (mode === 'number') {
-    return balloon.color.name === target.color.name && balloon.number === target.number;
+  if (mode === 'shape') {
+    return balloon.shape === target.shape;
   }
 
   return (
@@ -100,39 +118,234 @@ function getPrompt(target: Target, mode: LevelMode) {
     return `Pop ${target.color.name}`;
   }
 
-  if (mode === 'shape') {
-    return `Pop ${target.color.name} ${target.shape}`;
+  if (mode === 'fruit') {
+    return `Pop ${target.fruit.name}`;
   }
 
-  if (mode === 'number') {
-    return `Pop ${target.color.name} number ${target.number}`;
+  if (mode === 'shape') {
+    return `Pop ${target.shape}`;
   }
 
   return `Pop ${target.color.name} ${target.shape} number ${target.number}`;
 }
 
-function ShapeMarker({ shape }: { shape: BalloonShape }) {
+function createWrongBalloon(target: Target, mode: LevelMode) {
+  let color = randomItem(COLORS);
+  let shape = randomItem(SHAPES);
+  let number = randomItem(NUMBERS);
+  let fruit = randomItem(FRUITS);
+
+  while (
+    (mode === 'color' && color.name === target.color.name) ||
+    (mode === 'fruit' && fruit.name === target.fruit.name) ||
+    (mode === 'shape' && shape === target.shape) ||
+    (
+      mode === 'mixed' &&
+      color.name === target.color.name &&
+      shape === target.shape &&
+      number === target.number
+    )
+  ) {
+    color = randomItem(COLORS);
+    shape = randomItem(SHAPES);
+    number = randomItem(NUMBERS);
+    fruit = randomItem(FRUITS);
+  }
+
+  return { color, shape, number, fruit };
+}
+
+function FruitBody({ fruit, size }: { fruit: BalloonFruit; size: number }) {
+  const width = fruit.name === 'Banana' ? size * 2.45 : size * 2.05;
+  const height = fruit.name === 'Banana' ? size * 1.5 : size * 2.05;
+
+  return (
+    <Image
+      source={fruit.image}
+      resizeMode="contain"
+      style={[styles.fruitImage, { width, height }]}
+    />
+  );
+}
+
+function ShapeBody({
+  shape,
+  color,
+  size,
+  number,
+  showNumber,
+}: {
+  shape: BalloonShape;
+  color: BalloonColor;
+  size: number;
+  number: number;
+  showNumber: boolean;
+}) {
   if (shape === 'Triangle') {
-    return <View style={styles.triangle} />;
+    return (
+      <View style={{ alignItems: 'center' }}>
+        <View
+          style={[
+            styles.triangleBalloon,
+            {
+              borderLeftWidth: size * 0.55,
+              borderRightWidth: size * 0.55,
+              borderBottomWidth: size * 1.05,
+              borderBottomColor: color.hex,
+            },
+          ]}
+        >
+          {showNumber && (
+            <Text style={[styles.triangleNumber, { fontSize: size * 0.34 }]}>
+              {number}
+            </Text>
+          )}
+        </View>
+      </View>
+    );
   }
 
   if (shape === 'Square') {
-    return <View style={styles.square} />;
+    return (
+      <View style={[styles.squareBalloon, { width: size, height: size, backgroundColor: color.hex }]}>
+        {showNumber && <Text style={[styles.numberText, { fontSize: size * 0.42 }]}>{number}</Text>}
+      </View>
+    );
   }
 
   if (shape === 'Diamond') {
-    return <View style={styles.diamond} />;
+    return (
+      <View
+        style={[
+          styles.diamondBalloon,
+          { width: size * 0.85, height: size * 0.85, backgroundColor: color.hex },
+        ]}
+      >
+        {showNumber && (
+          <Text style={[styles.numberText, { fontSize: size * 0.42, transform: [{ rotate: '-45deg' }] }]}>
+            {number}
+          </Text>
+        )}
+      </View>
+    );
   }
 
-  return <View style={styles.circle} />;
+  return (
+    <View
+      style={[
+        styles.circleBalloon,
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: color.hex },
+      ]}
+    >
+      {showNumber && <Text style={[styles.numberText, { fontSize: size * 0.42 }]}>{number}</Text>}
+    </View>
+  );
+}
+
+function BalloonVisual({ balloon, mode }: { balloon: Balloon; mode: LevelMode }) {
+  if (mode === 'fruit') {
+    return <FruitBody fruit={balloon.fruit} size={balloon.size} />;
+  }
+
+  if (mode === 'shape' || mode === 'mixed') {
+    return (
+      <ShapeBody
+        shape={balloon.shape}
+        color={balloon.color}
+        size={balloon.size}
+        number={balloon.number}
+        showNumber={mode === 'mixed'}
+      />
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.balloonBody,
+        {
+          width: balloon.size,
+          height: balloon.size * 1.2,
+          backgroundColor: balloon.color.hex,
+        },
+      ]}
+    >
+      <View style={[styles.shine, { width: balloon.size * 0.28, height: balloon.size * 0.18 }]} />
+      <View
+        style={[
+          styles.innerGlow,
+          {
+            width: balloon.size * 0.5,
+            height: balloon.size * 0.35,
+            backgroundColor: `${balloon.color.dark}30`,
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+function TargetPreview({ target, mode }: { target: Target; mode: LevelMode }) {
+  const previewSize = 38;
+
+  if (mode === 'fruit') {
+    return (
+      <View style={styles.previewItem}>
+        <FruitBody fruit={target.fruit} size={previewSize} />
+      </View>
+    );
+  }
+
+  if (mode === 'shape') {
+    return (
+      <View style={styles.previewItem}>
+        <ShapeBody
+          shape={target.shape}
+          color={COLORS[1]}
+          size={previewSize}
+          number={target.number}
+          showNumber={false}
+        />
+      </View>
+    );
+  }
+
+  if (mode === 'mixed') {
+    return (
+      <View style={styles.previewItem}>
+        <ShapeBody
+          shape={target.shape}
+          color={target.color}
+          size={previewSize}
+          number={target.number}
+          showNumber
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.previewItem}>
+      <View
+        style={[
+          styles.balloonBody,
+          {
+            width: previewSize,
+            height: previewSize * 1.2,
+            backgroundColor: target.color.hex,
+          },
+        ]}
+      />
+      <View style={[styles.knot, { borderTopColor: target.color.dark }]} />
+    </View>
+  );
 }
 
 export default function BalloonPopGame() {
   const { width, height } = useWindowDimensions();
 
-  // Captured once on mount — prevents game restart on browser/window resize
-  const gameHeight = useRef(Math.max(360, height * 0.62)).current;
-  const balloonBaseSize = useRef(Math.min(92, Math.max(58, width * 0.11))).current;
+  const gameHeight = useRef(Math.max(360, height * 0.58)).current;
+  const balloonBaseSize = useRef(Math.min(98, Math.max(64, width * 0.12))).current;
 
   const [level, setLevel] = useState(1);
   const [target, setTarget] = useState<Target>(buildTarget());
@@ -173,28 +386,41 @@ export default function BalloonPopGame() {
     if (finishedRef.current) return;
 
     const currentLevel = LEVELS[levelRef.current - 1];
-    const shouldMatch = Math.random() < 0.5;
     const currentTarget = targetRef.current;
+    const shouldMatch = Math.random() < 0.5;
 
     let color = randomItem(COLORS);
     let shape = randomItem(SHAPES);
     let number = randomItem(NUMBERS);
+    let fruit = randomItem(FRUITS);
 
     if (shouldMatch) {
       color = currentTarget.color;
+      shape = currentTarget.shape;
+      number = currentTarget.number;
+      fruit = currentTarget.fruit;
+    } else {
+      const wrong = createWrongBalloon(currentTarget, currentLevel.mode);
+      color = wrong.color;
+      shape = wrong.shape;
+      number = wrong.number;
+      fruit = wrong.fruit;
+    }
 
-      if (currentLevel.mode === 'shape' || currentLevel.mode === 'mixed') {
-        shape = currentTarget.shape;
-      }
+    if (currentLevel.mode === 'fruit') {
+      color = fruit.color;
+    }
 
-      if (currentLevel.mode === 'number' || currentLevel.mode === 'mixed') {
-        number = currentTarget.number;
-      }
+    if (currentLevel.mode === 'shape') {
+      color = randomItem(COLORS);
     }
 
     const size = balloonBaseSize + Math.random() * 26;
-    const safeWidth = Math.max(1, width - size - 28);
-    const x = 14 + Math.random() * safeWidth;
+    const safeWidth = Math.max(1, width - size - 48);
+    const columns = Math.max(3, Math.floor(width / 120));
+    const column = idRef.current % columns;
+    const columnWidth = width / columns;
+    const x = column * columnWidth + 16 + Math.random() * Math.max(12, columnWidth - size - 32);
 
     const y = new Animated.Value(gameHeight + 10);
     const opacity = new Animated.Value(1);
@@ -204,10 +430,10 @@ export default function BalloonPopGame() {
 
     const anim = Animated.parallel([
       Animated.timing(y, {
-        toValue: -(size * 1.75) - 10,
+        toValue: -(size * 2.8) - 80,
         duration,
         easing: Easing.linear,
-        useNativeDriver: false,  // must be false so layout/touch bounds follow the animation
+        useNativeDriver: false,
       }),
       Animated.timing(opacity, {
         toValue: 0.95,
@@ -222,6 +448,7 @@ export default function BalloonPopGame() {
       color,
       shape,
       number,
+      fruit,
       x,
       size,
       y,
@@ -229,7 +456,7 @@ export default function BalloonPopGame() {
       anim,
     };
 
-    balloonsRef.current = [...balloonsRef.current, balloon].slice(-20);
+    balloonsRef.current = [...balloonsRef.current, balloon].slice(-18);
     setBalloons([...balloonsRef.current]);
 
     anim.start(({ finished }) => {
@@ -264,11 +491,12 @@ export default function BalloonPopGame() {
     speak(getPrompt(nextTarget, levelConfig.mode), { rate: 0.9 });
 
     for (let i = 0; i < 10; i++) {
-      const quickSpawn = setTimeout(createBalloon, i * 100);
+      const quickSpawn = setTimeout(createBalloon, i * 260);
       timersRef.current.push(quickSpawn);
     }
 
     const spawnTimer = setInterval(createBalloon, Number(levelConfig.spawnMs));
+
     const levelLimitTimer = setTimeout(() => {
       if (nextLevel >= MAX_LEVELS) {
         finishedRef.current = true;
@@ -279,9 +507,10 @@ export default function BalloonPopGame() {
         return;
       }
 
-      setFeedback('Level complete');
-      const nextTimer = setTimeout(() => startLevel(nextLevel + 1), 1200);
-      timersRef.current.push(nextTimer);
+      finishedRef.current = true;
+      clearTimers();
+      stopBalloons();
+      setIsOver(true);
     }, Number(levelConfig.seconds) * 1000);
 
     timersRef.current.push(spawnTimer, levelLimitTimer);
@@ -298,7 +527,7 @@ export default function BalloonPopGame() {
     setFeedback(null);
     finishedRef.current = false;
 
-    startLevel(1);
+    startLevel(levelRef.current);
   }, [clearTimers, startLevel, stopBalloons]);
 
   useEffect(() => {
@@ -393,7 +622,9 @@ export default function BalloonPopGame() {
       isOver={isOver}
     >
       <View style={styles.container}>
-        <View style={styles.promptRow}>
+        <View style={styles.targetCard}>
+          <Text style={styles.targetLabel}>Pop this</Text>
+          <TargetPreview target={target} mode={currentLevel.mode} />
           <Text style={styles.promptText}>{prompt}</Text>
         </View>
 
@@ -421,8 +652,8 @@ export default function BalloonPopGame() {
                 {
                   left: balloon.x,
                   top: balloon.y,
-                  width: balloon.size + 28,
-                  height: balloon.size * 1.75,
+                  width: balloon.size + 54,
+                  height: balloon.size * 2,
                   opacity: balloon.opacity,
                 },
               ]}
@@ -430,54 +661,16 @@ export default function BalloonPopGame() {
               <TouchableOpacity
                 onPress={() => handlePop(balloon)}
                 activeOpacity={0.75}
-                style={{ width: '100%', alignItems: 'center' }}
+                style={styles.touchInner}
               >
-                <View
-                  style={[
-                    styles.balloonBody,
-                    {
-                      width: balloon.size,
-                      height: balloon.size * 1.2,
-                      backgroundColor: balloon.color.hex,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.shine,
-                      {
-                        width: balloon.size * 0.28,
-                        height: balloon.size * 0.18,
-                      },
-                    ]}
-                  />
+                <BalloonVisual balloon={balloon} mode={currentLevel.mode} />
 
-                  {(currentLevel.mode === 'shape' || currentLevel.mode === 'mixed') && (
-                    <View style={styles.shapeWrap}>
-                      <ShapeMarker shape={balloon.shape} />
-                    </View>
-                  )}
-
-                  {(currentLevel.mode === 'number' || currentLevel.mode === 'mixed') && (
-                    <Text style={[styles.numberText, { fontSize: balloon.size * 0.42 }]}>
-                      {balloon.number}
-                    </Text>
-                  )}
-
-                  <View
-                    style={[
-                      styles.innerGlow,
-                      {
-                        width: balloon.size * 0.5,
-                        height: balloon.size * 0.35,
-                        backgroundColor: `${balloon.color.dark}30`,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <View style={[styles.knot, { borderTopColor: balloon.color.dark }]} />
-                <View style={styles.string} />
+                {currentLevel.mode !== 'fruit' && (
+                  <>
+                    <View style={[styles.knot, { borderTopColor: balloon.color.dark }]} />
+                    <View style={styles.string} />
+                  </>
+                )}
               </TouchableOpacity>
             </Animated.View>
           ))}
@@ -495,17 +688,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  promptRow: {
+  targetCard: {
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    minWidth: 180,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 4,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+  },
+  targetLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#8B8178',
+    marginBottom: 2,
+  },
+  previewItem: {
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   promptText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     color: '#3D3530',
     textAlign: 'center',
+    marginTop: 2,
   },
   statusRow: {
     flexDirection: 'row',
@@ -520,7 +730,7 @@ const styles = StyleSheet.create({
   },
   feedbackBubble: {
     position: 'absolute',
-    top: 68,
+    top: 114,
     alignSelf: 'center',
     zIndex: 50,
     backgroundColor: 'rgba(0,0,0,0.72)',
@@ -548,6 +758,16 @@ const styles = StyleSheet.create({
   balloonTouch: {
     position: 'absolute',
   },
+  touchInner: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  fruitImage: {
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+  },
   balloonBody: {
     borderRadius: 999,
     overflow: 'hidden',
@@ -572,38 +792,51 @@ const styles = StyleSheet.create({
     bottom: '10%',
     right: '10%',
   },
-  shapeWrap: {
-    position: 'absolute',
-    top: '26%',
+  circleBalloon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  squareBalloon: {
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  diamondBalloon: {
+    transform: [{ rotate: '45deg' }],
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  triangleBalloon: {
+    width: 0,
+    height: 0,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  circle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-  },
-  square: {
-    width: 22,
-    height: 22,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-  },
-  triangle: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 13,
-    borderRightWidth: 13,
-    borderBottomWidth: 24,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'rgba(255,255,255,0.9)',
-  },
-  diamond: {
-    width: 22,
-    height: 22,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    transform: [{ rotate: '45deg' }],
+  triangleNumber: {
+    position: 'absolute',
+    top: 34,
+    color: '#FFFFFF',
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   numberText: {
     color: '#FFFFFF',

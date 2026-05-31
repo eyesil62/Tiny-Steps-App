@@ -1,156 +1,315 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import * as Speech from 'expo-speech';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { GameShell } from '../../components/game/GameShell';
 
-const { width } = Dimensions.get('window');
-const CARD = (width - 60) / 2;
-
 const ANIMALS = [
-  { id: 'lion',     name: 'Lion',     emoji: '🦁', sound: 'ROAR',    speech: 'Roar!  Roar!'           },
-  { id: 'cow',      name: 'Cow',      emoji: '🐄', sound: 'MOO',     speech: 'Moo!  Moo!'             },
-  { id: 'dog',      name: 'Dog',      emoji: '🐶', sound: 'WOOF',    speech: 'Woof!  Woof!'           },
-  { id: 'cat',      name: 'Cat',      emoji: '🐱', sound: 'MEOW',    speech: 'Meow!  Meow!'           },
-  { id: 'duck',     name: 'Duck',     emoji: '🦆', sound: 'QUACK',   speech: 'Quack!  Quack!'         },
-  { id: 'elephant', name: 'Elephant', emoji: '🐘', sound: 'PAWOO',   speech: 'Pawoo!  Pawoo!'         },
-  { id: 'frog',     name: 'Frog',     emoji: '🐸', sound: 'RIBBIT',  speech: 'Ribbit!  Ribbit!'       },
-  { id: 'horse',    name: 'Horse',    emoji: '🐴', sound: 'NEIGH',   speech: 'Neigh!  Neigh!'         },
-  { id: 'sheep',    name: 'Sheep',    emoji: '🐑', sound: 'BAA',     speech: 'Baa!  Baa!'             },
-  { id: 'pig',      name: 'Pig',      emoji: '🐷', sound: 'OINK',    speech: 'Oink!  Oink!'           },
-];
+  { id: 'cat', name: 'Cat', emoji: '🐱', category: 'Pets', sound: require('../../assets/animal-sounds/cat.mp3') },
+  { id: 'dog', name: 'Dog', emoji: '🐶', category: 'Pets', sound: require('../../assets/animal-sounds/dog.mp3') },
+  { id: 'rabbit', name: 'Rabbit', emoji: '🐰', category: 'Pets', sound: require('../../assets/animal-sounds/rabbit.mp3') },
 
-function shuffle<T>(arr: T[]): T[] {
+  { id: 'cow', name: 'Cow', emoji: '🐄', category: 'Farm', sound: require('../../assets/animal-sounds/cow.mp3') },
+  { id: 'duck', name: 'Duck', emoji: '🦆', category: 'Farm', sound: require('../../assets/animal-sounds/duck.mp3') },
+  { id: 'horse', name: 'Horse', emoji: '🐴', category: 'Farm', sound: require('../../assets/animal-sounds/horse.mp3') },
+  { id: 'sheep', name: 'Sheep', emoji: '🐑', category: 'Farm', sound: require('../../assets/animal-sounds/sheep.mp3') },
+  { id: 'pig', name: 'Pig', emoji: '🐷', category: 'Farm', sound: require('../../assets/animal-sounds/pig.mp3') },
+  { id: 'chicken', name: 'Chicken', emoji: '🐔', category: 'Farm', sound: require('../../assets/animal-sounds/chicken.mp3') },
+  { id: 'goat', name: 'Goat', emoji: '🐐', category: 'Farm', sound: require('../../assets/animal-sounds/goat.mp3') },
+
+  { id: 'lion', name: 'Lion', emoji: '🦁', category: 'Wild', sound: require('../../assets/animal-sounds/lion.mp3') },
+  { id: 'elephant', name: 'Elephant', emoji: '🐘', category: 'Wild', sound: require('../../assets/animal-sounds/elephant.mp3') },
+  { id: 'monkey', name: 'Monkey', emoji: '🐵', category: 'Wild', sound: require('../../assets/animal-sounds/monkey.mp3') },
+
+  { id: 'frog', name: 'Frog', emoji: '🐸', category: 'Nature', sound: require('../../assets/animal-sounds/frog.mp3') },
+  { id: 'bird', name: 'Bird', emoji: '🐦', category: 'Nature', sound: require('../../assets/animal-sounds/bird.mp3') },
+] as const;
+
+type Animal = typeof ANIMALS[number];
+type Category = 'All' | Animal['category'];
+type Timer = ReturnType<typeof setTimeout>;
+
+const CATEGORIES: Category[] = ['All', 'Pets', 'Farm', 'Wild', 'Nature'];
+const MAX_LIVES = 3;
+const ROUNDS = 15;
+
+function shuffle<T>(arr: readonly T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
-function safeSpeak(text: string, opts?: Speech.SpeechOptions) {
-  Speech.isSpeakingAsync().then(speaking => {
-    if (speaking) {
-      Speech.stop().then(() => {
-        setTimeout(() => Speech.speak(text, {
-          language: 'en-US', rate: 0.72, pitch: 1.25, ...opts,
-        }), 200);
-      }).catch(() => {
-        setTimeout(() => Speech.speak(text, {
-          language: 'en-US', rate: 0.72, pitch: 1.25, ...opts,
-        }), 200);
-      });
-    } else {
-      setTimeout(() => Speech.speak(text, {
-        language: 'en-US', rate: 0.72, pitch: 1.25, ...opts,
-      }), 150);
-    }
-  }).catch(() => {
-    setTimeout(() => Speech.speak(text, {
-      language: 'en-US', rate: 0.72, pitch: 1.25, ...opts,
-    }), 150);
-  });
-}
-
 export default function AnimalSoundsGame() {
-  const [score,    setScore]    = useState(0);
-  const [lives,    setLives]    = useState(3);
-  const [round,    setRound]    = useState(1);
-  const [isWon,    setIsWon]    = useState(false);
-  const [isOver,   setIsOver]   = useState(false);
-  const [options,  setOptions]  = useState<typeof ANIMALS>([]);
-  const [target,   setTarget]   = useState<typeof ANIMALS[0] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [speaking, setSpeaking] = useState(false);
-  const ROUNDS = 8;
+  const { width } = useWindowDimensions();
+  const cardSize = useMemo(() => Math.min(170, (width - 54) / 2), [width]);
 
-  const playAnimalSound = useCallback((animal: typeof ANIMALS[0]) => {
-    setSpeaking(true);
-    safeSpeak(animal.speech, {
-      rate: 0.70,
-      pitch: 1.3,
-      onDone:  () => setSpeaking(false),
-      onError: () => setSpeaking(false),
-    });
+  const [category, setCategory] = useState<Category>('All');
+  const [score, setScore] = useState(0);
+  const [stars, setStars] = useState(0);
+  const [lives, setLives] = useState(MAX_LIVES);
+  const [round, setRound] = useState(1);
+  const [target, setTarget] = useState<Animal | null>(null);
+  const [options, setOptions] = useState<Animal[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [collected, setCollected] = useState<string[]>([]);
+  const [stickers, setStickers] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [isWon, setIsWon] = useState(false);
+  const [isOver, setIsOver] = useState(false);
+
+  const timersRef = useRef<Timer[]>([]);
+  const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
+  const roundAnimalsRef = useRef<Animal[]>([]);
+  const bounceAnim = useRef(new Animated.Value(1)).current;
+  const celebrationAnim = useRef(new Animated.Value(0)).current;
+
+  const animalsForCategory = useMemo(() => {
+    if (category === 'All') return ANIMALS;
+    return ANIMALS.filter((animal) => animal.category === category);
+  }, [category]);
+
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
   }, []);
 
-  const nextRound = useCallback((roundNum: number) => {
+  const playSound = useCallback((animal: Animal) => {
+    try {
+      playerRef.current?.release();
+      const player = createAudioPlayer(animal.sound);
+      playerRef.current = player;
+      player.seekTo(0);
+      player.play();
+
+      Animated.sequence([
+        Animated.timing(bounceAnim, { toValue: 1.1, duration: 120, useNativeDriver: true }),
+        Animated.timing(bounceAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+      ]).start();
+    } catch {
+      setFeedback('Sound missing');
+    }
+  }, [bounceAnim]);
+
+  const showCelebration = useCallback((text: string) => {
+    setFeedback(text);
+    celebrationAnim.setValue(0);
+
+    Animated.sequence([
+      Animated.timing(celebrationAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(celebrationAnim, { toValue: 0, duration: 420, delay: 500, useNativeDriver: true }),
+    ]).start();
+
+    const timer = setTimeout(() => setFeedback(null), 1000);
+    timersRef.current.push(timer);
+  }, [celebrationAnim]);
+
+  const buildRound = useCallback((roundNum: number) => {
+    clearTimers();
     setSelected(null);
     setFeedback(null);
-    // Use more animals as rounds progress
-    const poolSize = Math.min(4 + Math.floor(roundNum / 3), ANIMALS.length);
-    const pool     = shuffle(ANIMALS).slice(0, poolSize);
-    const pick     = pool[0];
-    const opts     = shuffle([pick, ...shuffle(pool.slice(1)).slice(0, 3)]);
+
+    if (roundNum === 1 || roundAnimalsRef.current.length === 0) {
+      roundAnimalsRef.current = shuffle(animalsForCategory).slice(0, Math.min(ROUNDS, animalsForCategory.length));
+    }
+
+    const pick = roundAnimalsRef.current[(roundNum - 1) % roundAnimalsRef.current.length];
+    const wrong = shuffle(ANIMALS.filter((animal) => animal.id !== pick.id)).slice(0, 3);
+    const nextOptions = shuffle([pick, ...wrong]);
+
     setTarget(pick);
-    setOptions(opts);
-    setTimeout(() => playAnimalSound(pick), 700);
-  }, [playAnimalSound]);
+    setOptions(nextOptions);
+
+    const timer = setTimeout(() => playSound(pick), 500);
+    timersRef.current.push(timer);
+  }, [animalsForCategory, clearTimers, playSound]);
 
   const restart = useCallback(() => {
-    setScore(0); setLives(3); setRound(1);
-    setIsWon(false); setIsOver(false);
-    nextRound(1);
-  }, [nextRound]);
+    clearTimers();
+    playerRef.current?.release();
+    roundAnimalsRef.current = [];
 
-  React.useEffect(() => { nextRound(1); }, []);
+    setScore(0);
+    setStars(0);
+    setLives(MAX_LIVES);
+    setRound(1);
+    setIsWon(false);
+    setIsOver(false);
+    setSelected(null);
+    setFeedback(null);
 
-  const handleTap = (animal: typeof ANIMALS[0]) => {
-    if (selected || !target) return;
+    buildRound(1);
+  }, [buildRound, clearTimers]);
+
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      interruptionMode: 'mixWithOthers',
+    });
+
+    buildRound(1);
+
+    return () => {
+      clearTimers();
+      playerRef.current?.release();
+    };
+  }, [buildRound, clearTimers]);
+
+  const changeCategory = useCallback((nextCategory: Category) => {
+    setCategory(nextCategory);
+    clearTimers();
+    playerRef.current?.release();
+    roundAnimalsRef.current = [];
+
+    setScore(0);
+    setStars(0);
+    setLives(MAX_LIVES);
+    setRound(1);
+    setIsWon(false);
+    setIsOver(false);
+    setSelected(null);
+    setFeedback(null);
+  }, [clearTimers]);
+
+  useEffect(() => {
+    buildRound(1);
+  }, [category]);
+
+  const handleTap = useCallback((animal: Animal) => {
+    if (!target || selected || isWon || isOver) return;
+
     setSelected(animal.id);
 
     if (animal.id === target.id) {
-      setFeedback('correct');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      safeSpeak(`Yes! ${animal.name}! Amazing!`, { rate: 0.88, pitch: 1.15 });
-      setScore(s => s + 15);
-      setTimeout(() => {
-        const next = round + 1;
-        if (next > ROUNDS) setIsWon(true);
-        else { setRound(next); nextRound(next); }
-      }, 1500);
-    } else {
-      setFeedback('wrong');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      safeSpeak('Try again! Listen carefully!', { rate: 0.9 });
-      const newLives = lives - 1;
-      setLives(newLives);
-      setTimeout(() => {
-        if (newLives <= 0) { setIsOver(true); }
-        else {
-          setSelected(null);
-          setFeedback(null);
-          setTimeout(() => target && playAnimalSound(target), 600);
+      playSound(animal);
+
+      setScore((current) => current + 15);
+      setStars((current) => current + 1);
+
+      setCollected((current) => (
+        current.includes(animal.id) ? current : [...current, animal.id]
+      ));
+
+      const nextSticker = `${animal.name} Sticker`;
+      setStickers((current) => (
+        current.includes(nextSticker) ? current : [...current, nextSticker]
+      ));
+
+      showCelebration(`${animal.name} found`);
+
+      const timer = setTimeout(() => {
+        const nextRound = round + 1;
+
+        if (nextRound > Math.min(ROUNDS, animalsForCategory.length)) {
+          setIsWon(true);
+          return;
         }
-      }, 1200);
+
+        setRound(nextRound);
+        buildRound(nextRound);
+      }, 1100);
+
+      timersRef.current.push(timer);
+      return;
     }
-  };
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    showCelebration('Try again');
+
+    const nextLives = lives - 1;
+    setLives(nextLives);
+
+    const timer = setTimeout(() => {
+      if (nextLives <= 0) {
+        setIsOver(true);
+        return;
+      }
+
+      setSelected(null);
+      setFeedback(null);
+      playSound(target);
+    }, 900);
+
+    timersRef.current.push(timer);
+  }, [
+    animalsForCategory.length,
+    buildRound,
+    isOver,
+    isWon,
+    lives,
+    playSound,
+    round,
+    selected,
+    showCelebration,
+    target,
+  ]);
+
+  const maxRounds = Math.min(ROUNDS, animalsForCategory.length);
 
   return (
     <GameShell
-      title="Animal Sounds" emoji="🦁" color="#6BCB77"
-      score={score} lives={lives} maxLives={3}
-      round={round} maxRounds={ROUNDS}
-      onRestart={restart} isWon={isWon} isOver={isOver}
+      title="Animal Safari"
+      emoji="🦁"
+      color="#6BCB77"
+      score={score}
+      lives={lives}
+      maxLives={MAX_LIVES}
+      round={round}
+      maxRounds={maxRounds}
+      onRestart={restart}
+      isWon={isWon}
+      isOver={isOver}
     >
       <View style={styles.container}>
-        {/* Sound card */}
-        <TouchableOpacity
-          style={[styles.soundCard, speaking && styles.soundCardActive]}
-          onPress={() => target && playAnimalSound(target)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.speakerIcon}>{speaking ? '🔊' : '🔈'}</Text>
-          <Text style={styles.soundWord}>{target?.sound ?? '...'}</Text>
-          <Text style={styles.soundHint}>
-            {speaking ? 'Listening...' : 'Tap to hear again'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.categories}>
+          {CATEGORIES.map((item) => (
+            <TouchableOpacity
+              key={item}
+              onPress={() => changeCategory(item)}
+              style={[styles.categoryChip, category === item && styles.categoryChipActive]}
+            >
+              <Text style={[styles.categoryText, category === item && styles.categoryTextActive]}>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        <Text style={styles.question}>Which animal makes this sound?</Text>
+        <View style={styles.collectionRow}>
+          <Text style={styles.collectionText}>
+            Animals {collected.length}/{ANIMALS.length}
+          </Text>
+          <Text style={styles.collectionText}>
+            Stickers {stickers.length}
+          </Text>
+        </View>
+
+        <View style={styles.soundCard}>
+          <Text style={styles.soundTitle}>Who made this sound?</Text>
+
+          <TouchableOpacity
+            onPress={() => target && playSound(target)}
+            activeOpacity={0.85}
+            style={styles.soundButton}
+          >
+            <Animated.View style={{ transform: [{ scale: bounceAnim }] }}>
+              <Text style={styles.soundButtonText}>Play Sound</Text>
+            </Animated.View>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.grid}>
           {options.map((animal) => {
             const isSelected = selected === animal.id;
-            const isCorrect  = isSelected && feedback === 'correct';
-            const isWrong    = isSelected && feedback === 'wrong';
+            const isCorrect = isSelected && target?.id === animal.id;
+            const isWrong = isSelected && target?.id !== animal.id;
+            const isCollected = collected.includes(animal.id);
+
             return (
               <TouchableOpacity
                 key={animal.id}
@@ -158,37 +317,170 @@ export default function AnimalSoundsGame() {
                 activeOpacity={0.85}
                 style={[
                   styles.card,
+                  { width: cardSize, height: cardSize * 0.92 },
                   isCorrect && styles.cardCorrect,
-                  isWrong   && styles.cardWrong,
+                  isWrong && styles.cardWrong,
                 ]}
               >
                 <Text style={styles.animalEmoji}>{animal.emoji}</Text>
                 <Text style={styles.animalName}>{animal.name}</Text>
-                {isCorrect && <Text style={styles.tick}>✓</Text>}
-                {isWrong   && <Text style={styles.cross}>✗</Text>}
+                <Text style={styles.animalCategory}>{animal.category}</Text>
+                {isCollected && <Text style={styles.collectedText}>Collected</Text>}
               </TouchableOpacity>
             );
           })}
         </View>
+
+        {feedback && (
+          <Animated.View
+            style={[
+              styles.celebration,
+              {
+                opacity: celebrationAnim,
+                transform: [
+                  {
+                    scale: celebrationAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.celebrationText}>{feedback}</Text>
+          </Animated.View>
+        )}
       </View>
     </GameShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, padding: 16, gap: 12, alignItems: 'center' },
-  soundCard:      { backgroundColor: '#E5F7E7', borderRadius: 20, borderWidth: 3, borderColor: '#6BCB77', padding: 16, alignItems: 'center', width: '100%', gap: 4 },
-  soundCardActive:{ backgroundColor: '#D0F0D8', borderColor: '#3A9946' },
-  speakerIcon:    { fontSize: 34 },
-  soundWord:      { fontSize: 34, fontWeight: '900', color: '#3D3530', letterSpacing: 2 },
-  soundHint:      { fontSize: 12, fontWeight: '700', color: '#8B8178' },
-  question:       { fontSize: 16, fontWeight: '800', color: '#3D3530' },
-  grid:           { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
-  card:           { width: CARD, height: CARD * 0.82, backgroundColor: '#fff', borderRadius: 16, borderWidth: 2.5, borderColor: '#F5EDD8', alignItems: 'center', justifyContent: 'center', gap: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3, position: 'relative' },
-  cardCorrect:    { borderColor: '#6BCB77', backgroundColor: '#E5F7E7' },
-  cardWrong:      { borderColor: '#FF6B6B', backgroundColor: '#FFE5E5' },
-  animalEmoji:    { fontSize: 44 },
-  animalName:     { fontSize: 14, fontWeight: '800', color: '#3D3530' },
-  tick:           { position: 'absolute', top: 6, right: 10, fontSize: 20, color: '#6BCB77', fontWeight: '900' },
-  cross:          { position: 'absolute', top: 6, right: 10, fontSize: 20, color: '#FF6B6B', fontWeight: '900' },
+  container: {
+    flex: 1,
+    padding: 14,
+    gap: 10,
+    alignItems: 'center',
+  },
+  categories: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#DDEFD8',
+  },
+  categoryChipActive: {
+    backgroundColor: '#6BCB77',
+    borderColor: '#6BCB77',
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#3D3530',
+  },
+  categoryTextActive: {
+    color: '#FFFFFF',
+  },
+  collectionRow: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  collectionText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#8B8178',
+  },
+  soundCard: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 14,
+    alignItems: 'center',
+    backgroundColor: '#E7F8DF',
+    borderWidth: 3,
+    borderColor: '#6BCB77',
+  },
+  soundTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#3D3530',
+    marginBottom: 8,
+  },
+  soundButton: {
+    minWidth: 160,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  soundButtonText: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#3D3530',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: '#F5EDD8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  cardCorrect: {
+    borderColor: '#6BCB77',
+    backgroundColor: '#E5F7E7',
+  },
+  cardWrong: {
+    borderColor: '#FF6B6B',
+    backgroundColor: '#FFE5E5',
+  },
+  animalEmoji: {
+    fontSize: 70,
+  },
+  animalName: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#3D3530',
+  },
+  animalCategory: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#8B8178',
+  },
+  collectedText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#6BCB77',
+  },
+  celebration: {
+    position: 'absolute',
+    top: '42%',
+    alignSelf: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderWidth: 3,
+    borderColor: '#FFD93D',
+  },
+  celebrationText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#3D3530',
+  },
 });

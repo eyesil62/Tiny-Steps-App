@@ -35,7 +35,7 @@ export default function HomeScreen() {
     : 100;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.cream }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#EBF0FA' }}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -168,7 +168,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  header:       { backgroundColor: colors.coral, padding: spacing.lg, paddingTop: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  header:       { backgroundColor: '#2D5BE3', padding: spacing.lg, paddingTop: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   profileBtn:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatarEmoji:  { fontSize: 36 },
   greet:        { fontSize: fontSize.sm, color: 'rgba(255,255,255,0.85)', fontWeight: fontWeight.bold },
@@ -186,9 +186,9 @@ const styles = StyleSheet.create({
   progressBar:  { height: 10, backgroundColor: colors.sand, borderRadius: radius.full, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: radius.full },
   levelHint:    { fontSize: fontSize.xs, color: colors.warmGray, fontWeight: fontWeight.bold },
-  section:      { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.dark },
+  section:      { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: '#1A2B5F' },
   grid:         { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  quickCard:    { width: '47%', aspectRatio: 1, borderRadius: 16, borderWidth: 2, alignItems: 'center', justifyContent: 'center', gap: 6, ...shadow.sm },
+  quickCard:    { width: '47%', aspectRatio: 1, borderRadius: 18, borderWidth: 0, alignItems: 'center', justifyContent: 'center', gap: 6, ...shadow.md },
   quickLabel:   { fontSize: fontSize.sm, fontWeight: fontWeight.heavy, color: colors.dark },
   card:         { backgroundColor: colors.white, borderRadius: radius.lg, padding: 16, gap: 2, ...shadow.md },
   habitRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.sand },
@@ -197,16 +197,16 @@ const styles = StyleSheet.create({
   check:        { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: colors.sand, alignItems: 'center', justifyContent: 'center' },
   checkDone:    { backgroundColor: colors.mint, borderColor: colors.mint },
   habitsLink:   { paddingTop: 10, alignItems: 'flex-end' },
-  habitsLinkText:{ fontSize: fontSize.sm, fontWeight: fontWeight.heavy, color: colors.coral },
+  habitsLinkText:{ fontSize: fontSize.sm, fontWeight: fontWeight.heavy, color: '#2D5BE3' },
   bubble:       { flex: 1, backgroundColor: colors.white, borderRadius: 16, borderBottomLeftRadius: 4, padding: 12, ...shadow.sm },
   bubbleText:   { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.dark, lineHeight: 20 },
   modalBg:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet:   { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, gap: spacing.md },
   modalTitle:   { fontSize: fontSize.xl, fontWeight: fontWeight.heavy, color: colors.dark, textAlign: 'center', marginBottom: 8 },
-  childRow:     { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: radius.lg, backgroundColor: colors.cream },
+  childRow:     { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: radius.lg, backgroundColor: '#EBF0FA' },
   childRowActive:{ backgroundColor: colors.mintLight, borderWidth: 2, borderColor: colors.mint },
   childName:    { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.dark },
   childAge:     { fontSize: fontSize.sm, color: colors.warmGray, fontWeight: fontWeight.bold },
   addChild:     { backgroundColor: colors.sand, borderRadius: radius.full, paddingVertical: 14, alignItems: 'center' },
-  addChildText: { fontSize: fontSize.md, fontWeight: fontWeight.heavy, color: colors.coral },
+  addChildText: { fontSize: fontSize.md, fontWeight: fontWeight.heavy, color: '#2D5BE3' },
 });
