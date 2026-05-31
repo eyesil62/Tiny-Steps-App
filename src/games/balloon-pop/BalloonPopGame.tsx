@@ -130,8 +130,9 @@ function ShapeMarker({ shape }: { shape: BalloonShape }) {
 export default function BalloonPopGame() {
   const { width, height } = useWindowDimensions();
 
-  const gameHeight = Math.max(360, height * 0.62);
-  const balloonBaseSize = Math.min(92, Math.max(58, width * 0.11));
+  // Captured once on mount — prevents game restart on browser/window resize
+  const gameHeight = useRef(Math.max(360, height * 0.62)).current;
+  const balloonBaseSize = useRef(Math.min(92, Math.max(58, width * 0.11))).current;
 
   const [level, setLevel] = useState(1);
   const [target, setTarget] = useState<Target>(buildTarget());
@@ -195,7 +196,7 @@ export default function BalloonPopGame() {
     const safeWidth = Math.max(1, width - size - 28);
     const x = 14 + Math.random() * safeWidth;
 
-    const y = new Animated.Value(gameHeight + size + 80);
+    const y = new Animated.Value(gameHeight + 10);
     const opacity = new Animated.Value(1);
     const id = `balloon-${Date.now()}-${idRef.current++}`;
 
@@ -203,16 +204,16 @@ export default function BalloonPopGame() {
 
     const anim = Animated.parallel([
       Animated.timing(y, {
-        toValue: -size - 220,
+        toValue: -(size * 1.75) - 10,
         duration,
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: false,  // must be false so layout/touch bounds follow the animation
       }),
       Animated.timing(opacity, {
         toValue: 0.95,
         duration,
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]);
 
@@ -344,7 +345,7 @@ export default function BalloonPopGame() {
       setCorrectPops(nextCorrectPops);
       setScore((current) => current + 10 + levelRef.current);
       setFeedback('Great pop');
-      setTimeout(() => setFeedback(null), 600);
+      timersRef.current.push(setTimeout(() => setFeedback(null), 600));
 
       if (nextCorrectPops >= currentLevel.goal) {
         clearTimers();
@@ -357,7 +358,7 @@ export default function BalloonPopGame() {
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     setFeedback('Try again');
-    setTimeout(() => setFeedback(null), 600);
+    timersRef.current.push(setTimeout(() => setFeedback(null), 600));
 
     setLives((current) => {
       const nextLives = current - 1;
@@ -413,24 +414,23 @@ export default function BalloonPopGame() {
           <View style={[styles.cloud, { top: '58%', left: '22%' }]} />
 
           {balloons.map((balloon) => (
-            <TouchableOpacity
+            <Animated.View
               key={balloon.id}
-              onPress={() => handlePop(balloon)}
-              activeOpacity={0.75}
               style={[
                 styles.balloonTouch,
                 {
                   left: balloon.x,
+                  top: balloon.y,
                   width: balloon.size + 28,
                   height: balloon.size * 1.75,
+                  opacity: balloon.opacity,
                 },
               ]}
             >
-              <Animated.View
-                style={{
-                  opacity: balloon.opacity,
-                  transform: [{ translateY: balloon.y }],
-                }}
+              <TouchableOpacity
+                onPress={() => handlePop(balloon)}
+                activeOpacity={0.75}
+                style={{ width: '100%', alignItems: 'center' }}
               >
                 <View
                   style={[
@@ -478,8 +478,8 @@ export default function BalloonPopGame() {
 
                 <View style={[styles.knot, { borderTopColor: balloon.color.dark }]} />
                 <View style={styles.string} />
-              </Animated.View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </Animated.View>
           ))}
         </View>
 
@@ -547,8 +547,6 @@ const styles = StyleSheet.create({
   },
   balloonTouch: {
     position: 'absolute',
-    bottom: 0,
-    alignItems: 'center',
   },
   balloonBody: {
     borderRadius: 999,

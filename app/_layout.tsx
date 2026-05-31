@@ -74,7 +74,7 @@ const splash = StyleSheet.create({
 
 // ── Root Navigator ────────────────────────────────────────────
 function RootNavigator() {
-  useSession();
+  const { sessionReady } = useSession();
   const isLoggedIn     = useAppStore((s) => s.isLoggedIn);
   const userId         = useAppStore((s) => s.userId);
   const setChildren    = useAppStore((s) => s.setChildren);
@@ -87,23 +87,14 @@ function RootNavigator() {
     return () => clearTimeout(minTimer);
   }, []);
 
-  // Load children when logged in
+  // Navigate once both the splash timer and the session check are done
   useEffect(() => {
-    if (!isLoggedIn || !userId) return;
-    childService.getAll(userId).then(({ data }) => {
-      if (data && data.length > 0) {
-        setChildren(data);
-        setActiveChild(data[0]);
-      }
-    });
-  }, [isLoggedIn, userId]);
-
-  // Navigate once app is ready
-  useEffect(() => {
-    if (!appReady) return;
+    if (!appReady || !sessionReady) return;
     if (isLoggedIn) {
       childService.getAll(userId!).then(({ data }) => {
         if (data && data.length > 0) {
+          setChildren(data);
+          setActiveChild(data[0]);
           router.replace('/(app)/(tabs)/home');
         } else {
           router.replace('/(auth)/child-setup');
@@ -112,9 +103,9 @@ function RootNavigator() {
     } else {
       router.replace('/(auth)/welcome');
     }
-  }, [appReady, isLoggedIn]);
+  }, [appReady, sessionReady, isLoggedIn]);
 
-  if (!appReady) return <SplashScreen />;
+  if (!appReady || !sessionReady) return <SplashScreen />;
   return <Slot />;
 }
 
