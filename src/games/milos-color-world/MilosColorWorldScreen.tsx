@@ -175,7 +175,7 @@ function PageSelectScreen({ category, onSelect, completedPages, pageColorings }:
 }
 
 // ── Coloring Screen ──────────────────────────────────────
-function ColoringScreen({ page, colorings, selectedColor, unlockedColors, onPaint, onUndo, onRedo, canUndo, canRedo, onClear, progress, onBack }: any) {
+function ColoringScreen({ page, colorings, onPaint, onUndo, onRedo, canUndo, canRedo, onClear, progress, onBack }: any) {
   return (
     <View style={styles.coloringScreen}>
       {/* Canvas area */}
@@ -189,7 +189,7 @@ function ColoringScreen({ page, colorings, selectedColor, unlockedColors, onPain
           <ColoringCanvas
             page={page}
             colorings={colorings}
-            selectedColor={selectedColor}
+            selectedColor={useColorWorldStore.getState().selectedColorId}
             onPaint={onPaint}
           />
         </View>
@@ -208,14 +208,6 @@ function ColoringScreen({ page, colorings, selectedColor, unlockedColors, onPain
         progress={progress}
       />
 
-      {/* Color palette */}
-      <ColorPalette
-        selected={selectedColor}
-        unlockedColors={unlockedColors}
-        onSelect={(id) => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }}
-      />
     </View>
   );
 }
@@ -337,8 +329,6 @@ export default function MilosColorWorldScreen() {
           <ColoringScreen
             page={currentPage}
             colorings={currentColorings}
-            selectedColor={store.selectedColorId}
-            unlockedColors={store.unlockedColors}
             onPaint={handlePaint}
             onUndo={store.undoLastAction}
             onRedo={store.redoLastAction}
@@ -347,6 +337,7 @@ export default function MilosColorWorldScreen() {
             onClear={() => store.clearPage(currentPage.id)}
             progress={progress}
           />
+
           {/* Color selection */}
           <ColorPalette
             selected={store.selectedColorId}
