@@ -106,8 +106,15 @@ export default function LittleChefCafe() {
   const [cooking,     setCooking]     = useState(false);
   const [feedback,    setFeedback]    = useState<string | null>(null);
   const [happiness,   setHappiness]   = useState(5);
-  const plateAnim   = useRef(new Animated.Value(0)).current;
-  const customerAnim= useRef(new Animated.Value(0)).current;
+  const plateAnim      = useRef(new Animated.Value(0)).current;
+  const customerAnim   = useRef(new Animated.Value(0)).current;
+  const cookIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (cookIntervalRef.current) clearInterval(cookIntervalRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(STORE_KEY).then(raw => {
@@ -157,12 +164,14 @@ export default function LittleChefCafe() {
     if (newAdded.length >= order.ingredients.length) {
       // All ingredients in — start cook animation
       setCooking(true);
+      if (cookIntervalRef.current) clearInterval(cookIntervalRef.current);
       let progress = 0;
-      const interval = setInterval(() => {
+      cookIntervalRef.current = setInterval(() => {
         progress += 25;
         setCookProgress(progress);
         if (progress >= 100) {
-          clearInterval(interval);
+          clearInterval(cookIntervalRef.current!);
+          cookIntervalRef.current = null;
           setCooking(false);
           setPhase('serve');
           say(`${order.name} is ready! Serve it to ${customer.name}!`);

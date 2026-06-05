@@ -99,12 +99,14 @@ function BathModal({ pet, onWash, onClose }: any) {
   const [bubbles, setBubbles] = useState<{ id: number; x: number; y: number }[]>([]);
   const SCRUBS_NEEDED = 5;
   const progress = Math.min(100, (scrubs / SCRUBS_NEEDED) * 100);
+  const completed = useRef(false);
 
   useEffect(() => {
     safeSpeak(`Bath time! Rub the ${pet.name} to make bubbles!`);
   }, []);
 
   const handleScrub = () => {
+    if (completed.current) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newScrubs = scrubs + 1;
     setScrubs(newScrubs);
@@ -112,6 +114,7 @@ function BathModal({ pet, onWash, onClose }: any) {
     setBubbles(prev => [...prev, { id: Date.now(), x: Math.random() * 180 + 20, y: Math.random() * 80 + 20 }]);
     safeSpeak('Splash!', 1.0, 1.3);
     if (newScrubs >= SCRUBS_NEEDED) {
+      completed.current = true;
       setTimeout(() => {
         safeSpeak(pet.sounds.clean);
         onWash();
@@ -160,22 +163,27 @@ function PlayModal({ pet, onPlay, onClose }: any) {
   const toy = TOYS[toyIndex];
   const toyX = useRef(new Animated.Value(W * 0.2)).current;
   const toyY = useRef(new Animated.Value(0)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     safeSpeak(pet.sounds.play);
     startToyMove();
+    return () => { loopRef.current?.stop(); };
   }, [toyIndex]);
 
   function startToyMove() {
+    loopRef.current?.stop();
     setCaught(false);
     toyX.setValue(W * 0.15);
     toyY.setValue(0);
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(toyX, { toValue: W * 0.6, duration: 1200, useNativeDriver: true }),
         Animated.timing(toyX, { toValue: W * 0.15, duration: 1200, useNativeDriver: true }),
       ])
-    ).start();
+    );
+    loopRef.current = loop;
+    loop.start();
   }
 
   const handleCatch = () => {

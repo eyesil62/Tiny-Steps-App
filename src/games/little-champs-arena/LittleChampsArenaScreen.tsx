@@ -49,7 +49,7 @@ function ScoreBoard({ score, best, shots, maxShots, sport, streak }: any) {
 }
 
 // ── Soccer Shootout ───────────────────────────────────────
-function SoccerShootout({ onDone, ballEmoji }: { onDone: (score: number) => void; ballEmoji: string }) {
+function SoccerShootout({ onDone, ballEmoji, best }: { onDone: (score: number) => void; ballEmoji: string; best: number }) {
   const SHOTS = 5;
   const [score,    setScore]    = useState(0);
   const [shotsLeft,setShotsLeft]= useState(SHOTS);
@@ -85,11 +85,11 @@ function SoccerShootout({ onDone, ballEmoji }: { onDone: (score: number) => void
       if (!isDragging.current) return;
       isDragging.current = false;
 
-      // Calculate shot direction
-      const dx = gs.x0 - startPos.current.x;
-      const dy = gs.y0 - startPos.current.y;
+      // Use accumulated gesture delta (gs.dx/dy go from grant to release)
+      const dx = gs.dx;
+      const dy = gs.dy;
 
-      if (Math.abs(dy) < 5) return; // not a proper swipe up
+      if (Math.abs(dy) < 5) return; // not a proper swipe
 
       const targetX = W / 2 + dx * 1.5;
       const isGoal  = targetX > W * 0.15 && targetX < W * 0.85;
@@ -103,6 +103,7 @@ function SoccerShootout({ onDone, ballEmoji }: { onDone: (score: number) => void
         Animated.timing(ballY, { toValue: H * 0.18,     duration: 600, useNativeDriver: true }),
         Animated.timing(ballScale, { toValue: 0.5, duration: 600, useNativeDriver: true }),
       ]).start(() => {
+        let finalScore = score;
         if (isGoal) {
           // GOAL!
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -115,9 +116,9 @@ function SoccerShootout({ onDone, ballEmoji }: { onDone: (score: number) => void
           const newStreak = streak + 1;
           const bonus     = newStreak >= 3 ? 10 : 0;
           const pts       = 10 + bonus;
-          const newScore  = score + pts;
+          finalScore      = score + pts;
           setStreak(newStreak);
-          setScore(newScore);
+          setScore(finalScore);
           const fb = newStreak >= 3 ? `🔥 STREAK! +${pts}` : `⚽ GOAL! +${pts}`;
           setFeedback({ text: fb, color: '#6BCB77' });
           say(randomFeedback('great'), 0.9, 1.2);
@@ -136,7 +137,7 @@ function SoccerShootout({ onDone, ballEmoji }: { onDone: (score: number) => void
           ballY.setValue(H * 0.65);
           ballScale.setValue(1);
           if (newShots <= 0) {
-            setTimeout(() => onDone(isGoal ? score + 10 : score), 800);
+            setTimeout(() => onDone(finalScore), 800);
           }
         }, 1000);
       });
@@ -144,6 +145,8 @@ function SoccerShootout({ onDone, ballEmoji }: { onDone: (score: number) => void
   });
 
   return (
+    <View style={{ flex: 1 }}>
+      <ScoreBoard score={score} best={best} shots={SHOTS - shotsLeft} maxShots={SHOTS} sport="soccer" streak={streak} />
     <View style={styles.soccerField}>
       {/* Grass */}
       <View style={styles.grassLines}>
@@ -183,11 +186,12 @@ function SoccerShootout({ onDone, ballEmoji }: { onDone: (score: number) => void
         </View>
       )}
     </View>
+    </View>
   );
 }
 
 // ── Basketball Hoops ──────────────────────────────────────
-function BasketballHoops({ onDone, ballEmoji }: { onDone: (score: number) => void; ballEmoji: string }) {
+function BasketballHoops({ onDone, ballEmoji, best }: { onDone: (score: number) => void; ballEmoji: string; best: number }) {
   const SHOTS = 5;
   const [score,    setScore]    = useState(0);
   const [shotsLeft,setShotsLeft]= useState(SHOTS);
@@ -238,13 +242,15 @@ function BasketballHoops({ onDone, ballEmoji }: { onDone: (score: number) => voi
       Animated.timing(ballX, { toValue: (hoopX as any)._value, duration: 550, useNativeDriver: true }),
       Animated.timing(ballScale, { toValue: 0.55, duration: 550, useNativeDriver: true }),
     ]).start(() => {
-      if (isBasket) {
+      let finalScore = score;
+    if (isBasket) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const newStreak = streak + 1;
         const bonus = newStreak >= 3 ? 10 : power > 0.7 ? 5 : 0;
         const pts = 10 + bonus;
+        finalScore = score + pts;
         setStreak(newStreak);
-        setScore(s => s + pts);
+        setScore(finalScore);
         setFeedback({ text: newStreak >= 3 ? `🔥 ON FIRE! +${pts}` : `🏀 BASKET! +${pts}`, color: '#FF9F43' });
         say(randomFeedback('great'), 0.9, 1.2);
       } else {
@@ -260,7 +266,7 @@ function BasketballHoops({ onDone, ballEmoji }: { onDone: (score: number) => voi
         ballY.setValue(H * 0.62);
         ballX.setValue(W / 2 - 25);
         ballScale.setValue(1);
-        if (newShots <= 0) setTimeout(() => onDone(score), 800);
+        if (newShots <= 0) setTimeout(() => onDone(finalScore), 800);
       }, 1000);
     });
   }, [streak, shotsLeft, score, shooting]);
@@ -269,6 +275,8 @@ function BasketballHoops({ onDone, ballEmoji }: { onDone: (score: number) => voi
   const powerColor    = powerAnim.interpolate({ inputRange: [0, 0.5, 0.88, 1], outputRange: ['#6BCB77', '#FFD93D', '#FF6B6B', '#FF0000'] });
 
   return (
+    <View style={{ flex: 1 }}>
+      <ScoreBoard score={score} best={best} shots={SHOTS - shotsLeft} maxShots={SHOTS} sport="basketball" streak={streak} />
     <View style={styles.courtArea}>
       {/* Court lines */}
       <View style={styles.courtCenter} />
@@ -308,11 +316,12 @@ function BasketballHoops({ onDone, ballEmoji }: { onDone: (score: number) => voi
         </TouchableOpacity>
       </View>
     </View>
+    </View>
   );
 }
 
 // ── Baseball Hit Zone ─────────────────────────────────────
-function BaseballHitZone({ onDone, batEmoji }: { onDone: (score: number) => void; batEmoji: string }) {
+function BaseballHitZone({ onDone, batEmoji, best }: { onDone: (score: number) => void; batEmoji: string; best: number }) {
   const PITCHES = 5;
   const [score,    setScore]    = useState(0);
   const [pitches,  setPitches]  = useState(PITCHES);
@@ -404,6 +413,8 @@ function BaseballHitZone({ onDone, batEmoji }: { onDone: (score: number) => void
   const batRotate = batAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-45deg'] });
 
   return (
+    <View style={{ flex: 1 }}>
+      <ScoreBoard score={score} best={best} shots={PITCHES - pitches} maxShots={PITCHES} sport="baseball" streak={streak} />
     <View style={styles.baseballField}>
       {/* Diamond */}
       <View style={styles.diamond} />
@@ -442,6 +453,7 @@ function BaseballHitZone({ onDone, batEmoji }: { onDone: (score: number) => void
           </TouchableOpacity>
         )}
       </View>
+    </View>
     </View>
   );
 }
@@ -513,7 +525,7 @@ function SportsParkHub({ onSelectSport, totalStars, bestScores }: any) {
           { emoji: '🌟', label: 'Mystery box', speech: 'A mystery box! Keep playing to unlock it!' },
         ].map((item, i) => (
           <TouchableOpacity key={i} style={styles.hubItem}
-            onPress={() => { tapItem(0, item.speech); say(item.speech); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            onPress={() => { tapItem(i, item.speech); say(item.speech); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             activeOpacity={0.8}>
             <Text style={styles.hubItemEmoji}>{item.emoji}</Text>
             <Text style={styles.hubItemLabel}>{item.label}</Text>
@@ -609,10 +621,9 @@ export default function LittleChampsArenaScreen() {
 
       {(screen === 'soccer' || screen === 'basketball' || screen === 'baseball') && (
         <>
-          <ScoreBoard score={0} best={store.bestScores[sport]} shots={0} maxShots={5} sport={sport} streak={0} />
-          {screen === 'soccer'     && <SoccerShootout      key={key} onDone={handleGameDone} ballEmoji={ballEmoji} />}
-          {screen === 'basketball' && <BasketballHoops     key={key} onDone={handleGameDone} ballEmoji={ballEmoji} />}
-          {screen === 'baseball'   && <BaseballHitZone     key={key} onDone={handleGameDone} batEmoji={batEmoji}   />}
+          {screen === 'soccer'     && <SoccerShootout      key={key} onDone={handleGameDone} ballEmoji={ballEmoji} best={store.bestScores.soccer} />}
+          {screen === 'basketball' && <BasketballHoops     key={key} onDone={handleGameDone} ballEmoji={ballEmoji} best={store.bestScores.basketball} />}
+          {screen === 'baseball'   && <BaseballHitZone     key={key} onDone={handleGameDone} batEmoji={batEmoji}   best={store.bestScores.baseball} />}
         </>
       )}
 

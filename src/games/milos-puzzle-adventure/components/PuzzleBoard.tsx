@@ -5,14 +5,16 @@
 import React, { useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Animated, PanResponder,
-  Dimensions, TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 import { Puzzle, PuzzlePiece } from '../data/puzzles';
 
 const { width: W } = Dimensions.get('window');
-const BOARD_SIZE = Math.min(W - 48, 320);
+const BOARD_SIZE = Math.min(W - 48, 300);
+// Fixed tray piece size so everything fits on screen without scrolling
+const TRAY_PIECE_SIZE = Math.min(Math.floor((W - 80) / 2), 120);
 
 function say(text: string, rate = 0.9, pitch = 1.2) {
   Speech.isSpeakingAsync().then(s => {
@@ -109,13 +111,13 @@ function DraggablePiece({ piece, slotSize, cols, boardLayout, placed, onPlaced, 
       style={[
         styles.trayPiece,
         {
-          width: slotSize - 8, height: slotSize - 8,
+          width: TRAY_PIECE_SIZE, height: TRAY_PIECE_SIZE,
           backgroundColor: piece.bgColor,
           transform: [{ translateX: pan.x }, { translateY: pan.y }, { scale }],
         },
       ]}
     >
-      <Text style={{ fontSize: slotSize * 0.38 }}>{piece.emoji}</Text>
+      <Text style={{ fontSize: TRAY_PIECE_SIZE * 0.45 }}>{piece.emoji}</Text>
     </Animated.View>
   );
 }
@@ -140,7 +142,9 @@ export function PuzzleBoard({ puzzle, onComplete }: Props) {
   }, [puzzle.pieceCount, onComplete]);
 
   const measureBoard = () => {
-    boardRef.current?.measureInWindow((x, y) => setBoardLayout({ x, y }));
+    setTimeout(() => {
+      boardRef.current?.measureInWindow((x, y) => setBoardLayout({ x, y }));
+    }, 200);
   };
 
   return (

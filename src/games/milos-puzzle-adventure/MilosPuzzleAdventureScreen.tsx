@@ -247,9 +247,9 @@ export default function MilosPuzzleAdventureScreen() {
 
       {/* PLAYING */}
       {screen === 'playing' && puzzle && (
-        <ScrollView contentContainerStyle={styles.playingScroll}>
+        <View style={styles.playingView}>
           <PuzzleBoard key={puzzle.id} puzzle={puzzle} onComplete={handleComplete} />
-        </ScrollView>
+        </View>
       )}
 
       {/* STICKERS */}
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   puzzleCheck:       { position: 'absolute', top: 4, right: 6, fontSize: 16, color: '#6BCB77', fontWeight: '900' },
   puzzleName:        { padding: 6, fontSize: 10, fontWeight: '800', color: '#3D3530', textAlign: 'center' },
   puzzlePieces:      { paddingBottom: 6, fontSize: 9, color: '#8B8178', fontWeight: '700', textAlign: 'center' },
-  playingScroll:     { padding: 16, alignItems: 'center', paddingBottom: 40 },
+  playingView:       { flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center' },
   gridScroll:        { padding: 16, gap: 14, paddingBottom: 32 },
   collectionTitle:   { fontSize: 14, fontWeight: '800', color: '#8B8178', textAlign: 'center' },
   collectionGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },

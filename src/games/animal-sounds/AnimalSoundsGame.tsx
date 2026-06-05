@@ -14,20 +14,15 @@ import { GameShell } from '../../components/game/GameShell';
 const ANIMALS = [
   { id: 'cat', name: 'Cat', emoji: '🐱', category: 'Pets', sound: require('../../assets/animal-sounds/cat.mp3') },
   { id: 'dog', name: 'Dog', emoji: '🐶', category: 'Pets', sound: require('../../assets/animal-sounds/dog.mp3') },
-  { id: 'rabbit', name: 'Rabbit', emoji: '🐰', category: 'Pets', sound: require('../../assets/animal-sounds/rabbit.mp3') },
-
   { id: 'cow', name: 'Cow', emoji: '🐄', category: 'Farm', sound: require('../../assets/animal-sounds/cow.mp3') },
   { id: 'duck', name: 'Duck', emoji: '🦆', category: 'Farm', sound: require('../../assets/animal-sounds/duck.mp3') },
   { id: 'horse', name: 'Horse', emoji: '🐴', category: 'Farm', sound: require('../../assets/animal-sounds/horse.mp3') },
   { id: 'sheep', name: 'Sheep', emoji: '🐑', category: 'Farm', sound: require('../../assets/animal-sounds/sheep.mp3') },
-  { id: 'pig', name: 'Pig', emoji: '🐷', category: 'Farm', sound: require('../../assets/animal-sounds/pig.mp3') },
   { id: 'chicken', name: 'Chicken', emoji: '🐔', category: 'Farm', sound: require('../../assets/animal-sounds/chicken.mp3') },
   { id: 'goat', name: 'Goat', emoji: '🐐', category: 'Farm', sound: require('../../assets/animal-sounds/goat.mp3') },
-
   { id: 'lion', name: 'Lion', emoji: '🦁', category: 'Wild', sound: require('../../assets/animal-sounds/lion.mp3') },
   { id: 'elephant', name: 'Elephant', emoji: '🐘', category: 'Wild', sound: require('../../assets/animal-sounds/elephant.mp3') },
   { id: 'monkey', name: 'Monkey', emoji: '🐵', category: 'Wild', sound: require('../../assets/animal-sounds/monkey.mp3') },
-
   { id: 'frog', name: 'Frog', emoji: '🐸', category: 'Nature', sound: require('../../assets/animal-sounds/frog.mp3') },
   { id: 'bird', name: 'Bird', emoji: '🐦', category: 'Nature', sound: require('../../assets/animal-sounds/bird.mp3') },
 ] as const;

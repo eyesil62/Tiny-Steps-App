@@ -375,7 +375,7 @@ export default function TinyTownGame() {
       </View>
 
       {/* Mission banner */}
-      {showMission && (
+      {showMissionBanner && (
         <Animated.View style={[styles.missionBanner, { transform: [{ translateY: bannerY }] }]}>
           <Text style={styles.missionEmoji}>{scene.missionEmoji}</Text>
           <Text style={styles.missionText}>Mission: {scene.mission}</Text>

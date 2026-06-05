@@ -196,8 +196,9 @@ export default function MilosQuestIsland() {
   const [foundHidden,  setFoundHidden]  = useState<string[]>([]);
   const [completedAreas, setCompleted]  = useState<string[]>([]);
   const [showDailyChest, setShowChest]  = useState(false);
-  const miloAnim = React.useRef(new Animated.Value(0)).current;
+  const miloAnim  = React.useRef(new Animated.Value(0)).current;
   const chestAnim = React.useRef(new Animated.Value(0)).current;
+  const answeredRef = React.useRef(false);
 
   useEffect(() => {
     AsyncStorage.getItem(STORE_KEY).then(raw => {
@@ -236,6 +237,7 @@ export default function MilosQuestIsland() {
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    answeredRef.current = false;
     setActiveArea(area);
     setPuzzleIndex(0);
     setFeedback(null);
@@ -243,7 +245,8 @@ export default function MilosQuestIsland() {
   };
 
   const handleAnswer = useCallback((correct: boolean, areaId: string) => {
-    if (!activeArea) return;
+    if (!activeArea || answeredRef.current) return;
+    answeredRef.current = true;
     const puzzle = activeArea.puzzles[puzzleIndex];
     Haptics.impactAsync(correct ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Light);
 
@@ -263,6 +266,7 @@ export default function MilosQuestIsland() {
 
       setTimeout(() => {
         setFeedback(null);
+        answeredRef.current = false;
         const next = puzzleIndex + 1;
         if (next >= activeArea.puzzles.length) {
           // Area complete!
@@ -282,7 +286,10 @@ export default function MilosQuestIsland() {
     } else {
       say('Not quite! Have another try!');
       setFeedback({ text: '❌ Try again!', correct: false });
-      setTimeout(() => setFeedback(null), 1000);
+      setTimeout(() => {
+        setFeedback(null);
+        answeredRef.current = false;
+      }, 1000);
     }
   }, [activeArea, puzzleIndex, gems, earnedBadges, unlockedAreas, foundHidden, completedAreas]);
 
